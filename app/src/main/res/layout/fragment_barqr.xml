@@ -29,7 +29,7 @@
         android:id="@+id/qrcodeImage"
         android:layout_width="300dp"
         android:layout_height="300dp"
+        android:layout_gravity="center"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="50dp"
-        android:src="@{viewModel.qrCode}"/>
+        android:layout_marginTop="50dp"/>
 </LinearLayout>
