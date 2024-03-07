@@ -10,5 +10,5 @@
     <string name="menu_home">Home</string>
     <string name="menu_gallery">Gallery</string>
     <string name="menu_slideshow">Slideshow</string>
-    <string name="menu_barqr">BARQR</string>
+    <string name="menu_barqr">BARCODE GENERATOR</string>
 </resources>
