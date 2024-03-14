@@ -32,6 +32,12 @@ android {
 }
 
 dependencies {
+    implementation ("androidx.camera:camera-core:1.1.0-alpha10")
+    implementation ("androidx.camera:camera-camera2:1.1.0-alpha10")
+    implementation ("androidx.camera:camera-lifecycle:1.1.0-alpha10")
+    implementation ("androidx.camera:camera-view:1.0.0-alpha32")
+
+
 
     // https://mavenlibs.com/maven/dependency/com.google.zxing/javase
     implementation ("com.google.zxing:javase:3.5.2")

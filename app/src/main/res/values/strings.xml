@@ -11,4 +11,10 @@
     <string name="menu_gallery">Gallery</string>
     <string name="menu_slideshow">Slideshow</string>
     <string name="menu_barqr">BARCODE GENERATOR</string>
+
+    <string-array name="themes_array">
+        <item>Light</item>
+        <item>Dark</item>
+        <item>System default</item>
+    </string-array>
 </resources>
