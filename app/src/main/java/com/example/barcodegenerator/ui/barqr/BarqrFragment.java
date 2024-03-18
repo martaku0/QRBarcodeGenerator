@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
+import android.media.MediaScannerConnection;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -15,11 +16,14 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -42,6 +46,8 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
+import org.w3c.dom.Text;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -52,8 +58,10 @@ public class BarqrFragment extends Fragment {
 
     private FragmentBarqrBinding binding;
     private ImageView qrcodeImgView;
-    private int barcodeWidth = 500;
-    private int barcodeHeight = 500;
+    private int barcodeWidth = 512;
+    private int barcodeHeight = 512;
+    private String pathToSave = "BarcodeGenerator";
+    private String nameToSave = "Image";
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -70,6 +78,10 @@ public class BarqrFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         Spinner spinner = binding.spinner;
+        qrcodeImgView = binding.qrcodeImage;
+        qrcodeImgView.getLayoutParams().width = barcodeWidth;
+        qrcodeImgView.getLayoutParams().height = barcodeHeight;
+
         String[] values = {"QRCODE", "CODE_128"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, values);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -77,6 +89,7 @@ public class BarqrFragment extends Fragment {
         binding.settBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                hideKeyboard();
                 showSettDialog();
             }
         });
@@ -85,15 +98,13 @@ public class BarqrFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 String qrcodeTxt = String.valueOf(binding.textToCode.getText());
-                qrcodeImgView = binding.qrcodeImage;
-                qrcodeImgView.getLayoutParams().width = barcodeWidth;
-                qrcodeImgView.getLayoutParams().height = barcodeHeight;
                 if(spinner.getSelectedItemId() == 0){
                     generateBarcodeQRCODE(qrcodeImgView, qrcodeTxt);
                 }
                 else if(spinner.getSelectedItemId() == 1){
                     generateBarcodeCODE128(qrcodeImgView, qrcodeTxt);
                 }
+                hideKeyboard();
             }
         });
 
@@ -168,21 +179,16 @@ public class BarqrFragment extends Fragment {
     }
 
     private void saveImageToGallery(Context context, Bitmap bitmap) {
-        String fileName = "image_" + System.currentTimeMillis() + ".png";
-//        File storageDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        String fileName = nameToSave + "_" + System.currentTimeMillis() + ".png";
 
-        //FIXME: custom dir
-        String customDirectoryPath = Environment.getExternalStorageDirectory() + "/custom";
+        String customDirectoryPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/" + pathToSave;
         File customDirectory = new File(customDirectoryPath);
-        // Create the directory if it doesn't exist
+
         if (!customDirectory.exists()) {
             customDirectory.mkdirs();
-            Log.d("TAG", "saveImageToGallery: ");
         }
-        File storageDirectory = customDirectory;
-        //ENDFIXME
 
-        File imageFile = new File(storageDirectory, fileName);
+        File imageFile = new File(customDirectory, fileName);
 
         try {
             FileOutputStream outputStream = new FileOutputStream(imageFile);
@@ -190,7 +196,9 @@ public class BarqrFragment extends Fragment {
             outputStream.flush();
             outputStream.close();
 
-            MediaStore.Images.Media.insertImage(context.getContentResolver(), imageFile.getAbsolutePath(), fileName, null);
+            MediaScannerConnection.scanFile(context,
+                    new String[]{imageFile.getAbsolutePath()},
+                    new String[]{"image/png"}, null);
 
             Toast.makeText(context, "Image saved successfully", Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
@@ -207,41 +215,161 @@ public class BarqrFragment extends Fragment {
         LinearLayout layout = new LinearLayout(requireContext());
         layout.setOrientation(LinearLayout.VERTICAL);
 
+        //match parent width seekbar
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+
         // width
-        final EditText widthEditText = new EditText(requireContext());
-        widthEditText.setInputType(InputType.TYPE_CLASS_NUMBER);
-        widthEditText.setHint("width [current:" + barcodeWidth + "]");
-        layout.addView(widthEditText);
+        LinearLayout widthLayout = new LinearLayout(requireContext());
+        widthLayout.setOrientation(LinearLayout.HORIZONTAL);
+
+        final TextView labelWidth = new TextView(requireContext());
+        labelWidth.setText("Width:");
+        widthLayout.addView(labelWidth);
+
+        final TextView currentWidth = new TextView(requireContext());
+        currentWidth.setText(String.valueOf(barcodeWidth) + "px");
+        widthLayout.addView(currentWidth);
+
+        final SeekBar widthSB = new SeekBar(requireContext());
+        widthSB.setMax(1024);
+        widthSB.setMin(100);
+        widthSB.setLayoutParams(layoutParams);
+        widthSB.setProgress(barcodeWidth);
+        widthSB.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                currentWidth.setText(String.valueOf(progress) + "px");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+        widthLayout.addView(widthSB);
+
+        layout.addView(widthLayout);
 
         // height
-        final EditText heightEditText = new EditText(requireContext());
-        heightEditText.setInputType(InputType.TYPE_CLASS_NUMBER);
-        heightEditText.setHint("height [current:" + barcodeHeight + "]");
-        layout.addView(heightEditText);
+        LinearLayout heightLayout = new LinearLayout(requireContext());
+        heightLayout.setOrientation(LinearLayout.HORIZONTAL);
 
+        final TextView labelHeight = new TextView(requireContext());
+        labelHeight.setText("Height:");
+        heightLayout.addView(labelHeight);
+
+        final TextView currentHeight = new TextView(requireContext());
+        currentHeight.setText(String.valueOf(barcodeHeight) + "px");
+        heightLayout.addView(currentHeight);
+
+        final SeekBar heightSB = new SeekBar(requireContext());
+        heightSB.setMax(1024);
+        heightSB.setMin(100);
+        heightSB.setLayoutParams(layoutParams);
+        heightSB.setProgress(barcodeHeight);
+        heightSB.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                currentHeight.setText(String.valueOf(progress) + "px");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+        heightLayout.addView(heightSB);
+
+        layout.addView(heightLayout);
+
+        // path
+        LinearLayout pathLayout = new LinearLayout(requireContext());
+        pathLayout.setOrientation(LinearLayout.HORIZONTAL);
+
+        final TextView dirLabel = new TextView(requireContext());
+        dirLabel.setText("Directory:");
+        pathLayout.addView(dirLabel);
+
+        final EditText dirET = new EditText(requireContext());
+        dirET.setHint(pathToSave);
+        pathLayout.addView(dirET);
+
+        layout.addView(pathLayout);
+
+        // name
+        LinearLayout nameLayout = new LinearLayout(requireContext());
+        nameLayout.setOrientation(LinearLayout.HORIZONTAL);
+
+        final TextView nameLabel = new TextView(requireContext());
+        nameLabel.setText("Name:");
+        nameLayout.addView(nameLabel);
+
+        final Spinner nameSpin = new Spinner(requireContext());
+        String[] values = {"default", "custom"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, values);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        nameSpin.setAdapter(adapter);
+        nameLayout.addView(nameSpin);
+
+        layout.addView(nameLayout);
+
+        final EditText nameET = new EditText(requireContext());
+        nameET.setHint("custom name");
+        nameSpin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if(position == 1){
+                    layout.addView(nameET);
+                }
+                else{
+                    layout.removeView(nameET);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
         builder.setView(layout);
         builder.setPositiveButton("Save", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        String widthInp = widthEditText.getText().toString();
-                        String heightInp = heightEditText.getText().toString();
-                        if(!TextUtils.isEmpty(widthInp) && !TextUtils.isEmpty(heightInp)) {
-                            try{
-                                int w = Integer.parseInt(widthInp);
-                                int h = Integer.parseInt(heightInp);
-                                changeSize(w,h);
-                            }
-                            catch (Exception ex){
-                                Log.e("Size settings", "Error: " + ex);
-                            }
+                        int w = widthSB.getProgress();
+                        int h = heightSB.getProgress();
+                        changeSize(w,h);
+                        String dir = String.valueOf(dirET.getText());
+                        boolean custom = true;
+                        if(nameSpin.getSelectedItemId() == 1){
+                            String name = String.valueOf(nameET.getText());
+                            custom = changeName(name);
                         }
-
-                        Toast.makeText(requireContext(), "Settings changed", Toast.LENGTH_SHORT).show();
+                        hideKeyboard();
+                        if(changePath(dir) && custom){
+                            Toast.makeText(requireContext(), "All settings changed", Toast.LENGTH_SHORT).show();
+                        }
+                        else{
+                            Toast.makeText(requireContext(), "Inputs should be letters", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 })
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
+                        hideKeyboard();
                         Toast.makeText(requireContext(), "Cancelled", Toast.LENGTH_SHORT).show();
                     }
                 });
@@ -253,7 +381,33 @@ public class BarqrFragment extends Fragment {
     private void changeSize(int w, int h){
         barcodeWidth = w;
         barcodeHeight = h;
+
         qrcodeImgView.getLayoutParams().width = w;
         qrcodeImgView.getLayoutParams().height = h;
+    }
+    private boolean changePath(String dir){
+        String regex = "^[a-zA-Z]+$";
+        if(dir.matches(regex)){
+            pathToSave = dir;
+            return true;
+        }
+        return false;
+    }
+
+    private boolean changeName(String nm){
+        String regex = "^[a-zA-Z]+$";
+        if(nm.matches(regex)){
+            nameToSave = nm;
+            return true;
+        }
+        return false;
+    }
+
+    public void hideKeyboard() {
+        View view = getView();
+        if (view != null) {
+            InputMethodManager inputMethodManager = (InputMethodManager) requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+            inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
     }
 }
