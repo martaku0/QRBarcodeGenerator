@@ -4,6 +4,9 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.Image;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -11,6 +14,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,15 +25,20 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.example.barcodegenerator.MyCaptureActivity;
 import com.example.barcodegenerator.databinding.FragmentHomeBinding;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
+import com.journeyapps.barcodescanner.CaptureActivity;
+
+import java.io.File;
 
 public class HomeFragment extends Fragment {
     //TODO: share code and copy to clipboard textresult - generowany kod lub tutaj
     private FragmentHomeBinding binding;
     private TextView resultText;
     private Button scanBtn;
+    private ImageView resultImage;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -41,6 +50,7 @@ public class HomeFragment extends Fragment {
 
         resultText = binding.resultText;
         scanBtn = binding.scanBtn;
+        resultImage = binding.resultImage;
 
 //        askPermission();
 
@@ -70,7 +80,9 @@ public class HomeFragment extends Fragment {
     private void initQRCodeScanner() {
         IntentIntegrator integrator = new IntentIntegrator(requireActivity());
         integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE, IntentIntegrator.CODE_128);
-        integrator.setOrientationLocked(false);
+        integrator.setOrientationLocked(true);
+        integrator.setCaptureActivity(MyCaptureActivity.class);
+        integrator.setBarcodeImageEnabled(true);
         integrator.setPrompt("");
         qrCodeScannerLauncher.launch(integrator.createScanIntent());
     }
@@ -81,9 +93,17 @@ public class HomeFragment extends Fragment {
                 IntentResult scanningResult = IntentIntegrator.parseActivityResult(result.getResultCode(), result.getData());
                 if (scanningResult != null) {
                     if (scanningResult.getContents() == null) {
-//                        Toast.makeText(requireContext(), "Scan cancelled", Toast.LENGTH_LONG).show();
+                        Toast.makeText(requireContext(), "Scan cancelled", Toast.LENGTH_LONG).show();
                     } else {
                         resultText.setText(scanningResult.getContents());
+                        if(scanningResult.getBarcodeImagePath() != null)
+                        {
+                            File image = new File(scanningResult.getBarcodeImagePath());
+                            BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+                            Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath(),bmOptions);
+                            bitmap = Bitmap.createScaledBitmap(bitmap,resultImage.getWidth(),resultImage.getHeight(),true);
+                            resultImage.setImageBitmap(bitmap);
+                        }
                     }
                 }
             });
