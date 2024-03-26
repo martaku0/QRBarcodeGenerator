@@ -1,12 +1,16 @@
 package com.example.barcodegenerator.ui.barqr;
 
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.MediaScannerConnection;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -31,6 +35,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -62,7 +67,7 @@ public class BarqrFragment extends Fragment {
     private int barcodeHeight = 512;
     private String pathToSave = "BarcodeGenerator";
     private String nameToSave = "Image";
-
+    private Bitmap imageBitmap = null;
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         BarqrViewModel barqrViewModel =
@@ -121,6 +126,56 @@ public class BarqrFragment extends Fragment {
                 }
             }
         });
+
+        binding.shareBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(imageBitmap != null){
+                    shareImageUri(saveImage(imageBitmap));
+                }
+                else{
+                    Toast.makeText(getActivity(), "Cannot share image!",
+                            Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+
+        binding.textToCode.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+
+                copyToClipboard(String.valueOf(binding.textToCode.getText()));
+
+                return false;
+            }
+        });
+    }
+
+    private Uri saveImage(Bitmap image) {
+        File imagesFolder = new File(getContext().getCacheDir(), "images");
+        Uri uri = null;
+        try {
+            imagesFolder.mkdirs();
+            File file = new File(imagesFolder, "share.png");
+            FileOutputStream stream = new FileOutputStream(file);
+            image.compress(Bitmap.CompressFormat.PNG, 90, stream);
+            stream.flush();
+            stream.close();
+            uri = FileProvider.getUriForFile(getContext(), "com.mydomain.fileprovider", file);
+
+        } catch (IOException e) {
+            Log.e("ERROR", "IOException while trying to write file for sharing: " + e.getMessage());
+            Toast.makeText(getContext(), "Error while sharing image", Toast.LENGTH_LONG).show();
+        }
+        return uri;
+    }
+
+    private void shareImageUri(Uri uri){
+        Intent intent = new Intent(android.content.Intent.ACTION_SEND);
+        intent.putExtra(Intent.EXTRA_STREAM, uri);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.setType("image/png");
+        startActivity(intent);
     }
 
     @Override
@@ -145,6 +200,8 @@ public class BarqrFragment extends Fragment {
                 }
 
                 imageView.setImageBitmap(bitmap);
+                imageBitmap = bitmap;
+                binding.shareBtn.setVisibility(View.VISIBLE);
 
             } catch (WriterException e) {
                 e.printStackTrace();
@@ -154,27 +211,40 @@ public class BarqrFragment extends Fragment {
             Toast.makeText(getActivity(), "Input cannot be empty!",
                     Toast.LENGTH_LONG).show();
             imageView.setImageBitmap(null);
+            imageBitmap = null;
+            binding.shareBtn.setVisibility(View.INVISIBLE);
         }
     }
 
     private void generateBarcodeCODE128(ImageView imageView, String text) {
-        MultiFormatWriter multiFormatWriter = new MultiFormatWriter();
-        try {
-            BitMatrix bitMatrix = multiFormatWriter.encode(text, BarcodeFormat.CODE_128, barcodeWidth, barcodeHeight);
-            int width = bitMatrix.getWidth();
-            int height = bitMatrix.getHeight();
-            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+        if(!text.equals("")) {
+            MultiFormatWriter multiFormatWriter = new MultiFormatWriter();
+            try {
+                BitMatrix bitMatrix = multiFormatWriter.encode(text, BarcodeFormat.CODE_128, barcodeWidth, barcodeHeight);
+                int width = bitMatrix.getWidth();
+                int height = bitMatrix.getHeight();
+                Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
 
-            for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    bitmap.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
+                for (int x = 0; x < width; x++) {
+                    for (int y = 0; y < height; y++) {
+                        bitmap.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
+                    }
                 }
+
+                imageView.setImageBitmap(bitmap);
+                imageBitmap = bitmap;
+                binding.shareBtn.setVisibility(View.VISIBLE);
+
+            } catch (WriterException e) {
+                e.printStackTrace();
             }
-
-            imageView.setImageBitmap(bitmap);
-
-        } catch (WriterException e) {
-            e.printStackTrace();
+        }
+        else{
+            Toast.makeText(getActivity(), "Input cannot be empty!",
+                    Toast.LENGTH_LONG).show();
+            imageView.setImageBitmap(null);
+            imageBitmap = null;
+            binding.shareBtn.setVisibility(View.INVISIBLE);
         }
     }
 
@@ -410,4 +480,13 @@ public class BarqrFragment extends Fragment {
             inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
     }
+
+    public void copyToClipboard(String text) {
+        Context context = getContext();
+        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("Copied Text", text);
+        clipboard.setPrimaryClip(clip);
+        Toast.makeText(getContext(), "Text copied to clipboard", Toast.LENGTH_LONG).show();
+    }
+
 }

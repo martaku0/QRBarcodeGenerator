@@ -34,7 +34,6 @@ import com.journeyapps.barcodescanner.CaptureActivity;
 import java.io.File;
 
 public class HomeFragment extends Fragment {
-    //TODO: share code and copy to clipboard textresult - generowany kod lub tutaj
     private FragmentHomeBinding binding;
     private TextView resultText;
     private Button scanBtn;
@@ -86,7 +85,6 @@ public class HomeFragment extends Fragment {
         integrator.setPrompt("");
         qrCodeScannerLauncher.launch(integrator.createScanIntent());
     }
-
     private final ActivityResultLauncher<Intent> qrCodeScannerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
