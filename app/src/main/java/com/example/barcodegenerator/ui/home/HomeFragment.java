@@ -1,6 +1,9 @@
 package com.example.barcodegenerator.ui.home;
 
 import android.Manifest;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -57,6 +60,14 @@ public class HomeFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 askPermission();
+            }
+        });
+
+        resultText.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                copyToClipboard((String) resultText.getText());
+                return false;
             }
         });
 
@@ -121,5 +132,13 @@ public class HomeFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         binding = null;
+    }
+
+    public void copyToClipboard(String text) {
+        Context context = getContext();
+        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("Copied Text", text);
+        clipboard.setPrimaryClip(clip);
+        Toast.makeText(getContext(), "Text copied to clipboard", Toast.LENGTH_LONG).show();
     }
 }
