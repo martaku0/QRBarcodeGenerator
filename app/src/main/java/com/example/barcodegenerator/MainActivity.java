@@ -2,7 +2,10 @@ package com.example.barcodegenerator;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -67,6 +70,12 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.main, menu);
 
         MenuItem settingsItem = menu.findItem(R.id.action_settings);
+        if(AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_NO){
+            changeButtonColor(settingsItem, Color.BLACK);
+        }
+        else{
+            changeButtonColor(settingsItem, Color.WHITE);
+        }
         settingsItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(@NonNull MenuItem item) {
@@ -76,6 +85,12 @@ public class MainActivity extends AppCompatActivity {
         });
 
         return true;
+    }
+
+    private void changeButtonColor(MenuItem settItem, int col){
+        SpannableString s = new SpannableString("Settings");
+        s.setSpan(new ForegroundColorSpan(col), 0, s.length(), 0);
+        settItem.setTitle(s);
     }
 
     @Override

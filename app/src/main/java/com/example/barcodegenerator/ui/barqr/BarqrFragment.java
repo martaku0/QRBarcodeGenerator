@@ -144,7 +144,7 @@ public class BarqrFragment extends Fragment {
             @Override
             public boolean onLongClick(View v) {
 
-                copyToClipboard(String.valueOf(binding.textToCode.getText()));
+//                copyToClipboard(String.valueOf(binding.textToCode.getText()));
 
                 return false;
             }
